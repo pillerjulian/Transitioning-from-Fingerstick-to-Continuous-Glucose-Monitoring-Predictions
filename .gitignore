@@ -2,3 +2,5 @@
 .ipynb_checkpoints
 # Project specific stuff
 dataset/
+# Others
+.idea
