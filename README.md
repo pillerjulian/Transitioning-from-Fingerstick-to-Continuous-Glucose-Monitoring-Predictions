@@ -1,7 +1,9 @@
 # Transitioning-from-Fingerstick-to-Continuous-Glucose-Monitoring-Predictions
 Semester Project - Data Driven Diabetes Management 
 
-TBD
+## Requirements
+To run the code, an conda environment with the needed packages must first be created. 
+**conda env create --name your_env_name --file=environment.yml**
 
 ## Scope 
 Diabetes is a chronic metabolic disease due to insufficient or the lack of insulin production from
