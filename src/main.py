@@ -6,7 +6,7 @@ import keras as keras
 import tensorflow as tf
 import keras.backend as K
 
-%matplotlib inline
+from datetime import datetime
 from statsmodels.tools.eval_measures import rmse
 from sklearn.preprocessing import MinMaxScaler
 from keras.preprocessing.sequence import TimeseriesGenerator
@@ -121,6 +121,7 @@ def read_patient(train_set, test_set, finger_window=1, prediction_window=80):
     y_test = [] # arrays of blood glucose with len of output_len
     continuous_ytest = [] # list with not scaled blood glucose from y_test not broken into arrays
 
+
     i = prediction_window
     while (i >= prediction_window and i < len(scaled_test_set)):
         x_test.append(scaled_test_set[i-prediction_window:i:finger_window, 1:])
@@ -199,7 +200,11 @@ def show_plots(continuous_ytest, continuous_predictions, smbg_scatter,rmse):
     plt.xlabel('Timestamp',fontsize=18)
     plt.ylabel('BGBG (mg/dL)',fontsize=18)
     plt.legend(['Real','Predictions'], loc='lower right')
-    plt.savefig("test1.png")
+    time = datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
+    plt.savefig(f"test_{time}.png") # TODO: Save the plot to a file
+
+
+
 
 def create_history_plot(history):
     # Plotting the training loss
@@ -209,7 +214,9 @@ def create_history_plot(history):
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train'], loc='upper right')
-    plt.savefig("loss1.png")
+    time = datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
+    plt.savefig(f"loss_{time}.png") # TODO: Save the plot to a file
+
 
 
 
@@ -219,9 +226,11 @@ if __name__ == "__main__":
 
     # Get the current working directory
     current_directory = os.getcwd()
+    print(current_directory)
     # Go one step up from the current directory
-    parent_directory = os.path.dirname(current_directory)
-    data_folder = os.path.join(parent_directory, 'dataset')
+    # parent_directory = os.path.dirname(current_directory)
+    # print(parent_directory)
+    data_folder = os.path.join(current_directory, 'dataset')
     print(data_folder)
 
     #data_folder = r'C:\Ohio_Data'

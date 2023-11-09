@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fa000caf-11f0-4ae4-8b55-d473100577f1" name="Changes" comment="" />
+    <list default="true" id="fa000caf-11f0-4ae4-8b55-d473100577f1" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/.ipynb_checkpoints/requirements-checkpoint.txt" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/.ipynb_checkpoints/requirements-checkpoint.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/.ipynb_checkpoints/script-checkpoint.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/.ipynb_checkpoints/script-checkpoint.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/script.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/script.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -22,12 +29,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
