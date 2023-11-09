@@ -2,8 +2,9 @@
 Semester Project - Data Driven Diabetes Management 
 
 ## Environment for Jupyter Notebook on Local Machine
-To run the code, an conda environment with the needed packages must first be created. 
-**conda env create --name your_env_name --file=environment.yml**
+To run the code, an conda environment with the needed packages must first be created. \
+**conda env create --name your_env_name --file=environment.yml** \ 
+Activate the created environment and open the jupyter notebook from this environment. 
 
 ## Ubelix
 
