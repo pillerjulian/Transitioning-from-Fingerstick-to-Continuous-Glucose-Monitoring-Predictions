@@ -1,9 +1,16 @@
 # Transitioning-from-Fingerstick-to-Continuous-Glucose-Monitoring-Predictions
 Semester Project - Data Driven Diabetes Management 
 
-## Requirements
+## Environment for Jupyter Notebook on Local Machine
 To run the code, an conda environment with the needed packages must first be created. 
 **conda env create --name your_env_name --file=environment.yml**
+
+## Ubelix
+
+- Transfer the files 'create_ubelix_env.sh', 'requirements.txt', 'script.sh' from the folder 'scripts' into Ubelix.
+- Transfer to Ubelix the 'dataset' folder with the subfolders 'Ohio2018_processed' and 'Ohio2020_processed'. 
+- Run 'create_ubelix_env.sh' in Ubelix. This will create a new environent with the correct Python version and the packages from "requirements.txt"
+- Now you can run the 'script.sh' to train the model and obtain the results.
 
 ## Scope 
 Diabetes is a chronic metabolic disease due to insufficient or the lack of insulin production from
