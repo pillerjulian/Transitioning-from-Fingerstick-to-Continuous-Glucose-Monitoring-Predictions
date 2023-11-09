@@ -9,7 +9,8 @@ Activate the created environment and open the jupyter notebook from this environ
 
 ### Ubelix
 - Transfer the files 'create_ubelix_env.sh', 'requirements.txt', 'script.sh' from the folder 'scripts' into Ubelix.
-- Transfer to Ubelix the 'dataset' folder with the subfolders 'Ohio2018_processed' and 'Ohio2020_processed'. 
+- Transfer to Ubelix the 'dataset' folder with the subfolders 'Ohio2018_processed' and 'Ohio2020_processed'.
+- Transfer the python file 'src/main.py' into Ubelix in a new folder called 'src'.
 - Run 'create_ubelix_env.sh' in Ubelix. This will create a new environent with the correct Python version and the packages from "requirements.txt"
 - Now you can run the 'script.sh' to train the model and obtain the results.
 
