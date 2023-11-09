@@ -14,6 +14,7 @@ Activate the created environment and open the jupyter notebook from this environ
 - Now you can run the 'script.sh' to train the model and obtain the results.
 
 ## Scope 
+*Copied directly from the project description, to be adjusted.*
 Diabetes is a chronic metabolic disease due to insufficient or the lack of insulin production from
 pancreatic β-cells. Insulin is the primary regulator for the cellular metabolism of blood glucose (BG)
 and any malfunction in its production results in elevated BG levels. For people with diabetes, it is
@@ -29,6 +30,7 @@ minimum number of finger stick blood samples are required to predict future bloo
 and adverse events as accurate as when CGM is used?
 
 ## Data 
+*Copied directly from the project description, to be adjusted.*
 You will be working with recorded data from 12 different individuals with T1D. The data was
 released in the OhioT1DM dataset. You will have access to information such as CGM, SMBG,
 basal insulin rate, bolus injection, the self-reported time and type of a meal, plus the patient’s
@@ -36,6 +38,7 @@ carbohydrate estimate for the meal and more. The measurements are provided at in
 minutes.
 
 ## Experiment 
+*Copied directly from the project description, to be adjusted.*
 Within the framework of this experiment, you will evaluate what number of finger stick blood
 samples are required to generate a CGM-like glucose profile by augmenting regular finger stick
 values (taken prior the BG before main meals and sleep) through artificially selecting CGM values
