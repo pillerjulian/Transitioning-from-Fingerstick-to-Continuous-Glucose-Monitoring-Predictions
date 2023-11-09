@@ -13,4 +13,4 @@ conda activate diabetesProject ## activate environment
 
 
 ## Run
-sbatch --cpus-per-task=20 --mail-user=daniel.kerber@students.unibe.ch --mail-type=BEGIN,FAIL,END --job-name="Diabetes test" --mem-per-cpu=32G --cpus-per-task=20 --wrap="python3 src/main.py"
+sbatch --mail-user=daniel.kerber@students.unibe.ch --mail-type=BEGIN,FAIL,END --job-name="Diabetes test" --mem-per-cpu=32G --cpus-per-task=20 --wrap="python3 src/main.py"
