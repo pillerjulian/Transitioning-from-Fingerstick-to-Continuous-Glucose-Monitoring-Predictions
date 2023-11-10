@@ -19,7 +19,7 @@ Activate the created environment and open the jupyter notebook from this environ
   - eval "$(conda shell.bash hook)"
   - conda create --name diabetesProject python=3.10.13
   - conda activate diabetesProject
-  - pip install -r requirements.txt (make sure you are in the same directory as 'requirements.txt'
+  - pip install -r requirements.txt (make sure you are in the same directory as 'requirements.txt')
 - Now create a folder 'results' inside diabetes. This folder will hold the results of 'main.py'.
 - Now you can run the 'script.sh' to train the model and obtain the results.
 - After completion of the job, adapt and run 'fetch_results.sh' on your local machine to download the results from Ubelix or download them manually.
