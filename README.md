@@ -8,11 +8,21 @@ To run the code, an conda environment with the needed packages must first be cre
 Activate the created environment and open the jupyter notebook from this environment. 
 
 ### Ubelix
-- Transfer the files 'create_ubelix_env.sh', 'requirements.txt', 'script.sh' from the folder 'scripts' into Ubelix.
-- Transfer to Ubelix the 'dataset' folder with the subfolders 'Ohio2018_processed' and 'Ohio2020_processed'.
-- Transfer the python file 'src/main.py' into Ubelix in a new folder called 'src'.
-- Run 'create_ubelix_env.sh' in Ubelix. This will create a new environent with the correct Python version and the packages from "requirements.txt"
+- Change the default mail address to your own mail address inside 'script.sh' from the folder 'scripts' to receive notifications about your job progress.
+- Transfer the files 'create_ubelix_env.sh', 'requirements.txt', 'script.sh' from the folder 'scripts' into Ubelix in a folder called diabetes.
+- Transfer to Ubelix the 'dataset' folder (NOT FOUND IN THIS REPOSITORY) with the subfolders 'Ohio2018_processed' and 'Ohio2020_processed' into the diabetes folder.
+- Transfer the python file 'src/main.py' into Ubelix in a new folder called 'src' in diabetes.
+- Make sure that you have execution rights for main.py (Check using 'ls -la' and in case you dont have the right add it using 'chmod +x main.py')
+- The following point will create a new conda environment called diabetesProject with the correct Python version and the packages from 'requirements.txt'
+- We recommend to execute manually the following commands in Ubelix instead of running the 'create_ubelix_env.sh' file:
+  - module load Anaconda3
+  - eval "$(conda shell.bash hook)"
+  - conda create --name diabetesProject python=3.10.13
+  - conda activate diabetesProject
+  - pip install -r requirements.txt (make sure you are in the same directory as 'requirements.txt'
+- Now create a folder 'results' inside diabetes. This folder will hold the results of 'main.py'.
 - Now you can run the 'script.sh' to train the model and obtain the results.
+- After completion of the job, adapt and run 'fetch_results.sh' on your local machine to download the results from Ubelix or download them manually.
 
 ## Scope 
 *Copied directly from the project description, to be adjusted.* 
