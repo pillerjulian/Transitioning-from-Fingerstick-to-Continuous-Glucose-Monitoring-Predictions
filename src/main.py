@@ -18,6 +18,7 @@ import io
 import math
 warnings.filterwarnings("ignore")
 
+
 def preprocess_data(data):
     # Replace any 0 values in 'finger' with corresponding values from 'cbg'
     data.loc[data['finger'] == 0, 'finger'] = data.loc[data['finger'] == 0, 'cbg'] 
@@ -44,8 +45,7 @@ def read_patient(train_set, test_set, finger_window=1, prediction_window=80):
     test_set = preprocess_data(test_set)
     
     # Use cbg, smbg, bolus, carbInput and the other stuff as inputs
-    features = ['cbg', 'finger', 'basal', 'hr', 'gsr', 'carbInput', 'bolus'] 
-    train_set = train_set[features].values
+    features = ['cbg', 'finger', 'basal', 'hr', 'gsr', 'carbInput', 'bolus']
     test_set = test_set[features].values
 
     # Scalling data from 0 - 1 for each individual feature, considering NaN to be unchanged 
@@ -159,7 +159,6 @@ def train_model(x_train, y_train, batch_size=1, epochs=1):
     model.compile(optimizer="adam", loss='mse', metrics=[rmse])
     # TODO: ADAM uses learning_rate=0.001 as default, we can try different values 
 
-    # TODO: Store loss values so we can have a plot
     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs)
 
     return model, history
@@ -191,33 +190,71 @@ def make_prediction(scalers_transforms_test, model, x_test, y_test):
 
     return predictions, continuous_predictions, rmse 
 
-def show_plots(continuous_ytest, continuous_predictions, smbg_scatter,rmse):
+# def show_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse):
+#     # Create a directory for results
+#     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+#     dir_name = f"plots_{time_stamp}"
+#     os.makedirs(dir_name, exist_ok=True)
+#
+#     # Plotting the predictions
+#     plt.figure(figsize=(16,8))
+#     plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse}')
+#     plt.plot(continuous_ytest, color = 'b')
+#     plt.plot(continuous_predictions, color = 'r')
+#     plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color = 'black', marker='o')
+#     plt.xlabel('Timestamp',fontsize=18)
+#     plt.ylabel('BGBG (mg/dL)',fontsize=18)
+#     plt.legend(['Real','Predictions'], loc='lower right')
+#
+#     # Save the plot in the new directory
+#     plt.savefig(f"{dir_name}/test_{time_stamp}.png")
+
+
+# def create_history_plot(history):
+#     # Create a directory for saving plots
+#     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+#     dir_name = f"plots_{time_stamp}"
+#     os.makedirs(dir_name, exist_ok=True)
+#
+#     # Plotting the training loss
+#     plt.figure(figsize=(12, 6))
+#     plt.plot(history.history['loss'])
+#     plt.title('Model loss')
+#     plt.ylabel('Loss')
+#     plt.xlabel('Epoch')
+#     plt.legend(['Train'], loc='upper right')
+#
+#     # Save the plot in the new directory
+#     plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
+
+
+def create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse, history):
+    # Create a directory for saving plots inside the 'results' folder
+    time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    dir_name = f"results/plots_{time_stamp}"  # Prepend 'results/' to the directory name
+    os.makedirs(dir_name, exist_ok=True)
+
+    # Plotting the predictions
     plt.figure(figsize=(16,8))
     plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse}')
-    plt.plot(continuous_ytest, color = 'b')
-    plt.plot(continuous_predictions, color = 'r') 
-    plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color = 'black', marker='o')
-    plt.xlabel('Timestamp',fontsize=18)
-    plt.ylabel('BGBG (mg/dL)',fontsize=18)
+    plt.plot(continuous_ytest, color='b')
+    plt.plot(continuous_predictions, color='r')
+    plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
+    plt.xlabel('Timestamp', fontsize=18)
+    plt.ylabel('CGM (mg/dL)', fontsize=18)
     plt.legend(['Real','Predictions'], loc='lower right')
-    time = datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
-    plt.savefig(f"test_{time}.png") # TODO: Save the plot to a file
+    plt.savefig(f"{dir_name}/test_{time_stamp}.png")
+    plt.close()  # Close the plot to free up memory
 
-
-
-
-def create_history_plot(history):
     # Plotting the training loss
     plt.figure(figsize=(12, 6))
     plt.plot(history.history['loss'])
-    plt.title('Model loss')
+    plt.title('Model Loss')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train'], loc='upper right')
-    time = datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
-    plt.savefig(f"loss_{time}.png") # TODO: Save the plot to a file
-
-
+    plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
+    plt.close()  # Close the plot to free up memory
 
 
 if __name__ == "__main__":
@@ -292,5 +329,6 @@ if __name__ == "__main__":
     x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, smbg_scatter = read_patient(all_train_2018, test_set)
     model, history = train_model(x_train, y_train, batch_size=25, epochs=25)
     predictions, continuous_predictions, rmse = make_prediction(scalers_transforms_test, model, x_test, y_test)
-    show_plots(continuous_ytest, continuous_predictions,  smbg_scatter, rmse)
-    create_history_plot(history)
+    # show_plots(continuous_ytest, continuous_predictions,  smbg_scatter, rmse)
+    # create_history_plot(history)
+    create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse, history)
