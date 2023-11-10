@@ -12,6 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.preprocessing.sequence import TimeseriesGenerator
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, TimeDistributed, Masking
+from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 import warnings
 import io
@@ -39,13 +40,14 @@ def preprocess_data(data):
     
     return data 
 	
-def read_patient(train_set, test_set, finger_window=1, prediction_window=80): 
+def read_patient(train_set, test_set, finger_window, prediction_window):
 
     train_set = preprocess_data(train_set)
     test_set = preprocess_data(test_set)
     
     # Use cbg, smbg, bolus, carbInput and the other stuff as inputs
     features = ['cbg', 'finger', 'basal', 'hr', 'gsr', 'carbInput', 'bolus']
+    train_set = train_set[features].values
     test_set = test_set[features].values
 
     # Scalling data from 0 - 1 for each individual feature, considering NaN to be unchanged 
@@ -141,7 +143,7 @@ def read_patient(train_set, test_set, finger_window=1, prediction_window=80):
 def rmse(x_train, y_train):
     return K.sqrt(K.mean(K.square(y_train - x_train)))
 
-def train_model(x_train, y_train, batch_size=1, epochs=1):
+def train_model(x_train, y_train, batch_size, epochs, learning_rate):
     # LSTM Model 
 
     # Using the number of features in x_train to dynamically determine the input shape
@@ -155,8 +157,10 @@ def train_model(x_train, y_train, batch_size=1, epochs=1):
     # model.add(LSTM(units=50, return_sequences=True)) # Additional LSTM layer that returns sequences
     # model.add(TimeDistributed(Dense(1)))  # 1 or 7 ? because y_train has a shape of [?, 49, 7]
 
+    custom_optimizer = Adam(learning_rate=learning_rate)
+
     # model.compile(optimizer="adam", loss='mse',metrics=['accuracy'])
-    model.compile(optimizer="adam", loss='mse', metrics=[rmse])
+    model.compile(optimizer=custom_optimizer, loss='mse', metrics=[rmse])
     # TODO: ADAM uses learning_rate=0.001 as default, we can try different values 
 
     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs)
@@ -228,7 +232,8 @@ def make_prediction(scalers_transforms_test, model, x_test, y_test):
 #     plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
 
 
-def create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse, history):
+def create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse, history,
+                          batch_size, epochs, learning_rate, finger_window, prediction_window):
     # Create a directory for saving plots inside the 'results' folder
     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     dir_name = f"results/plots_{time_stamp}"  # Prepend 'results/' to the directory name
@@ -243,6 +248,8 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter
     plt.xlabel('Timestamp', fontsize=18)
     plt.ylabel('CGM (mg/dL)', fontsize=18)
     plt.legend(['Real','Predictions'], loc='lower right')
+    plt.figtext(0.5, 0.01, f"Parameters: batch size: {batch_size}; #epochs: {epochs}; learning rate: {learning_rate};"
+                        f" #finger window: {finger_window}; #prediction window: {prediction_window}", ha='center')
     plt.savefig(f"{dir_name}/test_{time_stamp}.png")
     plt.close()  # Close the plot to free up memory
 
@@ -253,6 +260,8 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train'], loc='upper right')
+    plt.figtext(0.5, 0.01, f"Parameters: batch size: {batch_size}; #epochs: {epochs}; learning rate: {learning_rate};"
+                        f" #finger window: {finger_window}; #prediction window: {prediction_window}", ha='center')
     plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
     plt.close()  # Close the plot to free up memory
 
@@ -326,9 +335,16 @@ if __name__ == "__main__":
     index_patient_570 = 2
     train_set = train_set_2018[index_patient_570]
     test_set = test_set_2018[index_patient_570]
-    x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, smbg_scatter = read_patient(all_train_2018, test_set)
-    model, history = train_model(x_train, y_train, batch_size=25, epochs=25)
+    # Define Model Hyperparameters: (ADAPT ONLY HERE THE PARAMETERS)
+    batch_size = 25
+    epochs = 25
+    learning_rate = 0.001
+    finger_window = 1
+    prediction_window = 80
+    x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, smbg_scatter = read_patient(all_train_2018, test_set, finger_window, prediction_window)
+    model, history = train_model(x_train, y_train, batch_size, epochs, learning_rate)
     predictions, continuous_predictions, rmse = make_prediction(scalers_transforms_test, model, x_test, y_test)
     # show_plots(continuous_ytest, continuous_predictions,  smbg_scatter, rmse)
     # create_history_plot(history)
-    create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse, history)
+    create_and_save_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse, history,
+                          batch_size, epochs, learning_rate, finger_window, prediction_window)
