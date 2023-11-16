@@ -111,7 +111,8 @@ def read_patient(train_set, test_set, finger_window, prediction_window):
     # 'cbg' is the target, but we're using all features for input
     for i in range(prediction_window,len(scaled_train_set)):
         x_train.append(scaled_train_set[i-prediction_window:i:finger_window, 1:]) # to learn past data 6 features 
-        y_train.append(scaled_train_set[i-prediction_window:i, 0])  # to predict, 0 corresponds to 'cbg' as the prediction target ##### maybe wrong
+        y_train.append(scaled_train_set[i-prediction_window:i, 0])  # TODO: Should we also give the SMBG values to
+                                                                    # the model so it predicts the values in-between?
             
     x_train, y_train = np.array(x_train), np.array(y_train) # converting from list to numpy array
     
@@ -160,7 +161,7 @@ def train_model(x_train, y_train, batch_size, epochs, learning_rate):
     custom_optimizer = Adam(learning_rate=learning_rate)
 
     # model.compile(optimizer="adam", loss='mse',metrics=['accuracy'])
-    model.compile(optimizer=custom_optimizer, loss='mse', metrics=[rmse])
+    model.compile(optimizer=custom_optimizer, loss='mse', metrics=[rmse]) # TODO: Try different loss functions
     # TODO: ADAM uses learning_rate=0.001 as default, we can try different values 
 
     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs)
@@ -171,6 +172,9 @@ def make_prediction(scalers_transforms_test, model, x_test, y_test):
 
     # Make predictions
     predictions = model.predict(x_test)
+
+    # Maybe we should give somehow the SMGB values to the model so it predicts the values in-between
+
 
     predictions = np.reshape(predictions, (predictions.shape[0],predictions.shape[1])) # reshape just like y_test
 
@@ -274,9 +278,9 @@ if __name__ == "__main__":
     current_directory = os.getcwd()
     print(current_directory)
     # Go one step up from the current directory
-    # parent_directory = os.path.dirname(current_directory)
+    parent_directory = os.path.dirname(current_directory)
     # print(parent_directory)
-    data_folder = os.path.join(current_directory, 'dataset')
+    data_folder = os.path.join(parent_directory, 'dataset')
     print(data_folder)
 
     #data_folder = r'C:\Ohio_Data'
@@ -337,11 +341,11 @@ if __name__ == "__main__":
     test_set = test_set_2018[index_patient_570]
     # Define Model Hyperparameters: (ADAPT ONLY HERE THE PARAMETERS)
     batch_size = 25
-    epochs = 25
+    epochs = 4
     learning_rate = 0.001
     finger_window = 1
     prediction_window = 80
-    x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, smbg_scatter = read_patient(all_train_2018, test_set, finger_window, prediction_window)
+    x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, smbg_scatter = read_patient(train_set, test_set, finger_window, prediction_window)
     model, history = train_model(x_train, y_train, batch_size, epochs, learning_rate)
     predictions, continuous_predictions, rmse = make_prediction(scalers_transforms_test, model, x_test, y_test)
     # show_plots(continuous_ytest, continuous_predictions,  smbg_scatter, rmse)
