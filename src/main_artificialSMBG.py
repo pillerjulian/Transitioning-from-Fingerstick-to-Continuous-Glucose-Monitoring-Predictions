@@ -54,10 +54,10 @@ def preprocess_data(data, time_window):
     # TODO: Only do interpolation when missing_cbg is small
     # TODO: After doing interpolation, set the missing_cbg of the interpolated to 0
     data['cbg'] = data['cbg'].interpolate(method='linear', limit_direction='both')
-    #data['cbg'] = data['cbg'].interpolate(method='spline', order=3, limit_direction='both') # NOT WORKING
+    # data['cbg'] = data['cbg'].interpolate(method='spline', order=3, limit_direction='both') # NOT WORKING
 
     # data['finger'][::50] =  data['cbg'][::50]
-    data, artificial_SMBG_indices = add_artificial_SMBG(data, time_window) # 4h window
+    data, artificial_SMBG_indices = add_artificial_SMBG(data, time_window)  # 4h window
 
     # Periods of no food or bolus injected
     # data['bolus'].fillna(0.0, inplace=True)
@@ -164,35 +164,56 @@ def read_patient(train_set, test_set, finger_window, prediction_window, SMBG_win
     x_test = np.array(x_test)  # converting to numpy array
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], len(features) - 1))
 
-
     return x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, test_set_plotting, train_artificial_SMBG_indices, test_artificial_SMBG_indices
 
 
-def rmse(x_train, y_train):
-    return K.sqrt(K.mean(K.square(y_train - x_train)))
+def rmse(y_true, y_pred):
+    # Define a custom Root Mean Squared Error (RMSE) function as a metric
+    return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
+
+# def train_model(x_train, y_train, batch_size, epochs, learning_rate):
+#     # Using the number of features in x_train to dynamically determine the input shape
+#     num_features = x_train.shape[2]
+#
+#     model = Sequential()
+#     model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], num_features)))
+#     model.add(LSTM(units=50, return_sequences=False))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(units=y_train.shape[1]))
+#     # model.add(LSTM(units=50, return_sequences=True)) # Additional LSTM layer that returns sequences
+#     # model.add(TimeDistributed(Dense(1)))  # 1 or 7 ? because y_train has a shape of [?, 49, 7]
+#
+#     custom_optimizer = Adam(learning_rate=learning_rate)
+#
+#     # model.compile(optimizer="adam", loss='mse',metrics=['accuracy'])
+#     model.compile(optimizer=custom_optimizer, loss='mse', metrics=[rmse]) # TODO WHY LOSS = MSE and metric = RMSE?
+#     # TODO: ADAM uses learning_rate=0.001 as default, we can try different values
+#
+#     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs)
+#
+#     return model, history
 
 def train_model(x_train, y_train, batch_size, epochs, learning_rate):
-    # LSTM Model
-
-    # Using the number of features in x_train to dynamically determine the input shape
+    # Determine the number of features in x_train to dynamically determine the input shape
     num_features = x_train.shape[2]
 
+    # Define the model
+    # TODO: Test different dropout values, number of LSTM layers, number of LSTM units, etc.
     model = Sequential()
     model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], num_features)))
-    model.add(LSTM(units=50, return_sequences=False))  # Return sequences for the next LSTM layer
-    model.add(Dropout(0.5))
-    model.add(Dense(units=y_train.shape[1]))
-    # model.add(LSTM(units=50, return_sequences=True)) # Additional LSTM layer that returns sequences
-    # model.add(TimeDistributed(Dense(1)))  # 1 or 7 ? because y_train has a shape of [?, 49, 7]
+    model.add(LSTM(units=50, return_sequences=True))
+    model.add(
+        Dropout(0.2))  # Dropout layer to prevent overfitting, usually used when dataset is large and overfitting
+
+    # Added a TimeDistributed Dense layer, which applies a Dense (fully connected) operation to each timestep
+    # independently. Since we predict one 'cbg' value per timestep, the output dimension is set to 1
+    model.add(TimeDistributed(Dense(1)))
 
     custom_optimizer = Adam(learning_rate=learning_rate)
+    model.compile(optimizer=custom_optimizer, loss='mse', metrics=[rmse])
 
-    # model.compile(optimizer="adam", loss='mse',metrics=['accuracy'])
-    model.compile(optimizer=custom_optimizer, loss='mse', metrics=[rmse]) # TODO WHY LOSS = MSE and metric = RMSE?
-    # TODO: ADAM uses learning_rate=0.001 as default, we can try different values
-
-    history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs)
+    history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=1)
 
     return model, history
 
@@ -200,69 +221,26 @@ def train_model(x_train, y_train, batch_size, epochs, learning_rate):
 def make_prediction(scalers_transforms_test, model, x_test, y_test):
     # Make predictions
     predictions = model.predict(x_test)
+    predictions = np.reshape(predictions, (predictions.shape[0], predictions.shape[1]))  # reshape to match y_test
+    predictions = scalers_transforms_test[0].inverse_transform(predictions)  # bring values back to original scale
 
-    predictions = np.reshape(predictions, (predictions.shape[0], predictions.shape[1]))  # reshape just like y_test
-
-    predictions = scalers_transforms_test[0].inverse_transform(predictions)  #########
-
-    # for i in range(predictions.shape[1]):
-    #     column = predictions[0, i].reshape(-1, 1)
-    #     predictions = scalers_transforms[i].inverse_transform(column).flatten()
-
-    # Create a continuous data of predictions to plot with continuous_ytest
+    # Initialize an array to hold the continuous sequence of predictions
     continuous_predictions = predictions[0]
 
+    # Concatenate the predictions from each batch into a continuous sequence of predictions for plotting
     for i in range(1, len(predictions)):
         continuous_predictions = np.concatenate([continuous_predictions, predictions[i]])
 
-    # continuous_predictions = scalers_transforms[0].inverse_transform(continuous_predictions.reshape(-1, 1)).flatten()
-
+    # Calculate the RMSE
     y_test = np.array(y_test)
     rmse = np.sqrt(np.mean(((predictions - y_test) ** 2)))
 
     return predictions, continuous_predictions, rmse
 
 
-# def show_plots(continuous_ytest, continuous_predictions, smbg_scatter, rmse):
-#     # Create a directory for results
-#     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-#     dir_name = f"plots_{time_stamp}"
-#     os.makedirs(dir_name, exist_ok=True)
-#
-#     # Plotting the predictions
-#     plt.figure(figsize=(16,8))
-#     plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse}')
-#     plt.plot(continuous_ytest, color = 'b')
-#     plt.plot(continuous_predictions, color = 'r')
-#     plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color = 'black', marker='o')
-#     plt.xlabel('Timestamp',fontsize=18)
-#     plt.ylabel('BGBG (mg/dL)',fontsize=18)
-#     plt.legend(['Real','Predictions'], loc='lower right')
-#
-#     # Save the plot in the new directory
-#     plt.savefig(f"{dir_name}/test_{time_stamp}.png")
-
-
-# def create_history_plot(history):
-#     # Create a directory for saving plots
-#     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-#     dir_name = f"plots_{time_stamp}"
-#     os.makedirs(dir_name, exist_ok=True)
-#
-#     # Plotting the training loss
-#     plt.figure(figsize=(12, 6))
-#     plt.plot(history.history['loss'])
-#     plt.title('Model loss')
-#     plt.ylabel('Loss')
-#     plt.xlabel('Epoch')
-#     plt.legend(['Train'], loc='upper right')
-#
-#     # Save the plot in the new directory
-#     plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
-
-
 def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
-                          batch_size, epochs, learning_rate, finger_window, prediction_window, test_artificial_SMBG_indices):
+                          batch_size, epochs, learning_rate, finger_window, prediction_window,
+                          test_artificial_SMBG_indices):
     # Create a directory for saving plots inside the 'results' folder
     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     dir_name = f"results/plots_{time_stamp}"  # Prepend 'results/' to the directory name
@@ -273,8 +251,9 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plo
     plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse}')
     plt.plot(continuous_ytest, color='b')
     plt.plot(continuous_predictions, color='r')
-    #plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
-    plt.plot(np.arange(len(test_set_plotting['finger'])),test_set_plotting['finger'], marker='o', linestyle='-', color='black',
+    # plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
+    plt.plot(np.arange(len(test_set_plotting['finger'])), test_set_plotting['finger'], marker='o', linestyle='-',
+             color='black',
              label='finger')
     plt.scatter(np.arange(len(test_set_plotting['finger']))[test_artificial_SMBG_indices],
                 test_set_plotting['finger'].iloc[test_artificial_SMBG_indices], marker='o', color='green',
@@ -311,8 +290,8 @@ if __name__ == "__main__":
 
     # UNCOMMENT THIS PART IF USED ON LOCAL MACHINE
     # Go one step up from the current directory
-    # parent_directory = os.path.dirname(current_directory)
-    # data_folder = os.path.join(parent_directory, 'dataset')
+    parent_directory = os.path.dirname(current_directory)
+    data_folder = os.path.join(parent_directory, 'dataset')
 
     # List of patient excel IDs in the year folders
     patient_ids_2018 = [559, 563, 570, 575, 588, 591]
@@ -371,18 +350,18 @@ if __name__ == "__main__":
 
     # Select input data
     train_input_data = None
-    inter_model = True
+    inter_model = False
     patient_index = 2
     all_train_inter_model = []
     if inter_model:
         for i in range(len(patient_ids_2018)):
             if i != patient_index:
-                all_train_inter_model.append(train_set_2018[i])  # pd.concat([all_train_inter_model, train_set_2018[i]], ignore_index=True)
+                all_train_inter_model.append(
+                    train_set_2018[i])  # pd.concat([all_train_inter_model, train_set_2018[i]], ignore_index=True)
         all_train_inter_model = pd.concat(all_train_inter_model, ignore_index=True)
         train_input_data = all_train_inter_model
     else:
         train_input_data = train_set_2018[patient_index]
-
 
     # Define Model Hyperparameters: (ADAPT ONLY HERE THE PARAMETERS)
     batch_size = 15
@@ -398,4 +377,5 @@ if __name__ == "__main__":
     # show_plots(continuous_ytest, continuous_predictions,  smbg_scatter, rmse)
     # create_history_plot(history)
     create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
-                          batch_size, epochs, learning_rate, finger_window, prediction_window, test_artificial_SMBG_indices)
+                          batch_size, epochs, learning_rate, finger_window, prediction_window,
+                          test_artificial_SMBG_indices)
