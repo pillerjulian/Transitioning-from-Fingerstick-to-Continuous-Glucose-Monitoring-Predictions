@@ -46,7 +46,7 @@ def add_artificial_SMBG(data, time_between_two_SMBGs_in_h):
     return data, artificial_SMBG_indices
 
 
-def preprocess_data(data, time_window):
+def preprocess_data(data, SMBG_window):
     # Replace any 0 values in 'finger' with corresponding values from 'cbg'
     data.loc[data['finger'] == 0, 'finger'] = data.loc[data['finger'] == 0, 'cbg']
 
@@ -57,7 +57,7 @@ def preprocess_data(data, time_window):
     # data['cbg'] = data['cbg'].interpolate(method='spline', order=3, limit_direction='both') # NOT WORKING
 
     # data['finger'][::50] =  data['cbg'][::50]
-    data, artificial_SMBG_indices = add_artificial_SMBG(data, time_window)  # 4h window
+    data, artificial_SMBG_indices = add_artificial_SMBG(data, SMBG_window)  # 4h window
 
     # Periods of no food or bolus injected
     # data['bolus'].fillna(0.0, inplace=True)
@@ -240,7 +240,7 @@ def make_prediction(scalers_transforms_test, model, x_test, y_test):
 
 def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
                           batch_size, epochs, learning_rate, finger_window, prediction_window,
-                          test_artificial_SMBG_indices):
+                          test_artificial_SMBG_indices, inter_statement):
     # Create a directory for saving plots inside the 'results' folder
     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     dir_name = f"results/plots_{time_stamp}"  # Prepend 'results/' to the directory name
@@ -248,7 +248,7 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plo
 
     # Plotting the predictions
     plt.figure(figsize=(16, 8))
-    plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse}')
+    plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse} ({inter_statement})')
     plt.plot(continuous_ytest, color='b')
     plt.plot(continuous_predictions, color='r')
     # plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
@@ -269,7 +269,7 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plo
     # Plotting the training loss
     plt.figure(figsize=(12, 6))
     plt.plot(history.history['loss'])
-    plt.title('Model Loss')
+    plt.title(f'Model Loss ({inter_statement})')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train'], loc='upper right')
@@ -351,9 +351,11 @@ if __name__ == "__main__":
     # Select input data
     train_input_data = None
     inter_model = False
+    inter_statement = "intra-patient model"  # Dont change
     patient_index = 2
     all_train_inter_model = []
     if inter_model:
+        inter_statement = "inter-patient model"
         for i in range(len(patient_ids_2018)):
             if i != patient_index:
                 all_train_inter_model.append(
@@ -378,4 +380,4 @@ if __name__ == "__main__":
     # create_history_plot(history)
     create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
                           batch_size, epochs, learning_rate, finger_window, prediction_window,
-                          test_artificial_SMBG_indices)
+                          test_artificial_SMBG_indices, inter_statement)
