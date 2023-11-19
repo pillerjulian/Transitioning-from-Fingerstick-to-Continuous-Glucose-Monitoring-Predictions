@@ -22,26 +22,34 @@ warnings.filterwarnings("ignore")
 
 
 def add_artificial_SMBG(data, time_between_two_SMBGs_in_h):
+    # Convert the maximal time window between two SMBG values into number of samples
     time_step_distance = round(time_between_two_SMBGs_in_h * 12)  # hours * 60min/hour / 5min/step
     artificial_SMBG_indices = []
+    # Get indices of available SMBG values
     SMB_indices = data['finger'][data['finger'].notna()].index
+    # Calculate the distance between two successive available values and if the distance is longer
+    # than the defined maximum, insert additional artificial SMBG values
     for i in range(len(SMB_indices)):
-        if i == 0:
+        if i == 0:  # first value --> distance to this value
             distance = SMB_indices[i]
-        elif i == len(SMB_indices) - 1:
+        elif i == len(SMB_indices) - 1:  # last value --> distance to the end
             distance = data['cbg'].index[-1] - SMB_indices[i]
-        else:
+        else:  # not first or last index --> distance between two successive values
             distance = SMB_indices[i + 1] - SMB_indices[i]
         if distance > time_step_distance:
             num_artificial_points = math.ceil(
-                distance / time_step_distance) - 1  # TODO CHECK twice the distance --> add one artificial point
+                distance / time_step_distance) - 1  # For example: twice the distance --> add one artificial point
             if num_artificial_points > 0:
+                # For each needed atrificial SMBG value, calculate the index and copy
+                # the CGM value at this index
                 for j in range(num_artificial_points):
                     if i == 0:
                         artificial_index = time_step_distance * (j + 1)
                     else:
                         artificial_index = SMB_indices[i] + time_step_distance * (j + 1)
                     data['finger'].iloc[artificial_index] = data['cbg'].iloc[artificial_index]
+                    # Save artificial indices for the differentiation between artificial and real
+                    # SMBG value in the result figure
                     artificial_SMBG_indices.append(artificial_index)
     return data, artificial_SMBG_indices
 
@@ -73,7 +81,7 @@ def read_patient(train_set, test_set, finger_window, prediction_window, SMBG_win
     train_set, train_artificial_SMBG_indices = preprocess_data(train_set, SMBG_window)
     test_set, test_artificial_SMBG_indices = preprocess_data(test_set, SMBG_window)
 
-    test_set_plotting = test_set
+    test_set_plotting = test_set  # save dataframe for the plotting of SMBG values in the results
 
     # Use cbg, smbg, bolus, carbInput and the other stuff as inputs
     features = ['cbg', 'finger', 'basal', 'hr', 'gsr', 'carbInput', 'bolus']
@@ -254,10 +262,10 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plo
     # plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
     plt.plot(np.arange(len(test_set_plotting['finger'])), test_set_plotting['finger'], marker='o', linestyle='-',
              color='black',
-             label='finger')
+             label='finger') # plot all SMBG values (artificial and real)
     plt.scatter(np.arange(len(test_set_plotting['finger']))[test_artificial_SMBG_indices],
                 test_set_plotting['finger'].iloc[test_artificial_SMBG_indices], marker='o', color='green',
-                label='artificial finger', s=50, zorder=5)
+                label='artificial finger', s=50, zorder=5) # plot the artifical SMBG values in another color
     plt.xlabel('Timestamp', fontsize=18)
     plt.ylabel('CGM (mg/dL)', fontsize=18)
     plt.legend(['Real', 'Predictions', "SMBG", "Artificial SMBG"], loc='lower right')
@@ -354,7 +362,7 @@ if __name__ == "__main__":
     inter_statement = "intra-patient model"  # Dont change
     patient_index = 2
     all_train_inter_model = []
-    if inter_model:
+    if inter_model: # Concatenate the data of all patients excluding the patient under investigation
         inter_statement = "inter-patient model"
         for i in range(len(patient_ids_2018)):
             if i != patient_index:
@@ -363,7 +371,7 @@ if __name__ == "__main__":
         all_train_inter_model = pd.concat(all_train_inter_model, ignore_index=True)
         train_input_data = all_train_inter_model
     else:
-        train_input_data = train_set_2018[patient_index]
+        train_input_data = train_set_2018[patient_index]  # only one patient
 
     # Define Model Hyperparameters: (ADAPT ONLY HERE THE PARAMETERS)
     batch_size = 15
