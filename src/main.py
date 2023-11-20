@@ -151,7 +151,7 @@ def train_model(x_train, y_train, batch_size, epochs, learning_rate):
     num_features = x_train.shape[2]
     
     model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], num_features)))
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], num_features))) #add batch normalization 
     model.add(LSTM(units=50, return_sequences=False)) # Return sequences for the next LSTM layer
     model.add(Dropout(0.5))
     model.add(Dense(units=y_train.shape[1]))
