@@ -26,16 +26,16 @@ def add_artificial_SMBG(data, time_between_two_SMBGs_in_h):
     time_step_distance = round(time_between_two_SMBGs_in_h * 12)  # hours * 60min/hour / 5min/step
     artificial_SMBG_indices = []
     # Get indices of available SMBG values
-    SMB_indices = data['finger'][data['finger'].notna()].index
+    SMBG_indices = data['finger'][data['finger'].notna()].index
     # Calculate the distance between two successive available values and if the distance is longer
     # than the defined maximum, insert additional artificial SMBG values
-    for i in range(len(SMB_indices)):
+    for i in range(len(SMBG_indices)):
         if i == 0:  # first value --> distance to this value
-            distance = SMB_indices[i]
-        elif i == len(SMB_indices) - 1:  # last value --> distance to the end
-            distance = data['cbg'].index[-1] - SMB_indices[i]
+            distance = SMBG_indices[i]
+        elif i == len(SMBG_indices) - 1:  # last value --> distance to the end
+            distance = data['cbg'].index[-1] - SMBG_indices[i]
         else:  # not first or last index --> distance between two successive values
-            distance = SMB_indices[i + 1] - SMB_indices[i]
+            distance = SMBG_indices[i + 1] - SMBG_indices[i]
         if distance > time_step_distance:
             num_artificial_points = math.ceil(
                 distance / time_step_distance) - 1  # For example: twice the distance --> add one artificial point
@@ -45,8 +45,12 @@ def add_artificial_SMBG(data, time_between_two_SMBGs_in_h):
                 for j in range(num_artificial_points):
                     if i == 0:
                         artificial_index = time_step_distance * (j + 1)
+                    elif i == len(SMBG_indices)-1:
+                        artificial_index = SMBG_indices[i]+time_step_distance*(j+1)
+                        if artificial_index > data['cbg'].index[-1]: # check if artificial index is outside of CGM signal
+                            break
                     else:
-                        artificial_index = SMB_indices[i] + time_step_distance * (j + 1)
+                        artificial_index = SMBG_indices[i] + time_step_distance * (j + 1)
                     data['finger'].iloc[artificial_index] = data['cbg'].iloc[artificial_index]
                     # Save artificial indices for the differentiation between artificial and real
                     # SMBG value in the result figure
