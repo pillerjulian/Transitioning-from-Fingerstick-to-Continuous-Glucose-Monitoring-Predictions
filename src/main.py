@@ -11,7 +11,7 @@ from statsmodels.tools.eval_measures import rmse
 from sklearn.preprocessing import MinMaxScaler
 from keras.preprocessing.sequence import TimeseriesGenerator
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout, TimeDistributed, Masking
+from keras.layers import Dense, LSTM, Dropout, TimeDistributed, Masking, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 import warnings
@@ -77,6 +77,20 @@ def preprocess_data(data, SMBG_window):
     :param SMBG_window: SMBG window
     :return: preprocessed data and the indices of the artificial SMBG values
     """
+    # max_CGM_NaN_distance = 12 #in hours
+    #
+    # # Drop the rows with large gaps in cbg in the data
+    # CGM_indices = data['cbg'][data['cbg'].isna()].index
+    # print(CGM_indices)
+    # diffs = np.diff(CGM_indices)
+    # # Find where the difference between consecutive indices is greater than 1
+    # breaks = np.where(diffs > (max_CGM_NaN_distance*12))[0]
+    # print(breaks)
+    # for count, b in enumerate(breaks):
+    #     if count == len(breaks)-1:
+    #         break
+    #     else:
+    #         data.drop(data.index[CGM_indices[b]:CGM_indices[b+1]], inplace=True)
 
     # Interpolate the zones with missing 'cbg' so there is not regions with super steep changes
     data['cbg'] = data['cbg'].interpolate(method='linear', limit_direction='both')
@@ -90,12 +104,6 @@ def preprocess_data(data, SMBG_window):
     # Periods of no food or bolus injected
     data['bolus'].fillna(0.0, inplace=True)
     data['carbInput'].fillna(0.0, inplace=True)
-    # Periods of no basal insulin
-    # data['basal'].fillna(0.0, inplace=True)  # TODO: Check if that's ok
-
-    # data['finger'].fillna(0.0, inplace=True)
-
-    # data['cbg'].fillna(0.0, inplace=True)
 
     return data, artificial_SMBG_indices
 
@@ -188,7 +196,7 @@ def read_patient(train_set, test_set, prediction_window, SMBG_window):
     for i in range(prediction_window, len(scaled_train_set)):
         x_train.append(scaled_train_set[i - prediction_window:i, 1:])
         y_train.append(scaled_train_set[i - prediction_window:i,
-                       0])  # to predict, 0 corresponds to 'cbg' as the prediction target ##### maybe wrong
+                       0])  # to predict, 0 corresponds to 'cbg' as the prediction target
 
     x_train, y_train = np.array(x_train), np.array(y_train)  # converting from list to numpy array
 
@@ -218,6 +226,7 @@ def read_patient(train_set, test_set, prediction_window, SMBG_window):
 
     return x_train, y_train, x_test, y_test, ground_truth_cbg, scalers_transforms_train, scalers_transforms_test, test_set_plotting, train_artificial_SMBG_indices, test_artificial_SMBG_indices
 
+
 def train_model(x_train, y_train, batch_size, epochs, learning_rate):
     """
     Create and train the model
@@ -232,20 +241,21 @@ def train_model(x_train, y_train, batch_size, epochs, learning_rate):
     num_features = x_train.shape[2]  # number of features except cbg (finger, basal, carbInput, bolus)
 
     model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(prediction_window_size, num_features)))
-    model.add(LSTM(units=50, return_sequences=False))  # try activation = 'relu' inside this 2 layers
-    # model.add(Dropout(0.2))
+    model.add(
+        LSTM(units=100, return_sequences=True, activation="tanh", input_shape=(prediction_window_size, num_features)))
+    model.add(BatchNormalization())  # Added Batch Normalization layer
+    model.add(LSTM(units=100, return_sequences=False, activation="tanh"))
+    # model.add(BatchNormalization())  # Added Batch Normalization layer
+    model.add(Dropout(0.2))  # TODO: Try more/less dropout and or remove it
     model.add(Dense(units=y_train.shape[1]))
 
-    # custom_optimizer = Adam(learning_rate=learning_rate)
+    custom_optimizer = Adam(learning_rate=learning_rate)
 
-    model.compile(optimizer="adam", loss='mse')
-    # model.compile(optimizer=custom_optimizer, loss='mse')
+    # model.compile(optimizer="adam", loss='mse')
+    model.compile(optimizer=custom_optimizer, loss='mse')
 
-    # TODO: ADAM uses learning_rate=0.001 as default, we can try different values
     # TODO: try with Relu activation function
-    # TODO: try more LSTM Units
-    # TODO: Try more/less dropout
+    # TODO: try more LSTM Units     # the original is 50 50
 
     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs)
 
@@ -276,56 +286,17 @@ def make_prediction(scalers_transforms_test, model, x_test, y_test):
     # Calculate the RMSE
     y_test = np.array(y_test)
 
-    print("shape y_test:", y_test.shape) # shape y_test: (35, 80)
-    print("shape prediction:", predictions.shape) # shape prediction: (35, 80)
+    print("shape y_test:", y_test.shape)  # shape y_test: (35, 80)
+    print("shape prediction:", predictions.shape)  # shape prediction: (35, 80)
 
     rmse = round(np.sqrt(np.mean(((predictions - y_test) ** 2))), 4)
 
     return predictions, predicted_cbg, rmse
 
 
-# def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
-#                           batch_size, epochs, learning_rate, prediction_window,
-#                           test_artificial_SMBG_indices, inter_statement):
-#     # Create a directory for saving plots inside the 'results' folder
-#     time_stamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-#     dir_name = f"results/plots_{time_stamp}"  # Prepend 'results/' to the directory name
-#     os.makedirs(dir_name, exist_ok=True)
-#     # Plotting the predictions
-#     plt.figure(figsize=(16, 8))
-#     plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse} ({inter_statement})')
-#     # plt.plot(continuous_ytest, color='b')
-#     plt.plot(np.arange(len(test_set_plotting['cbg'])), test_set_plotting['cbg'],color='blue')
-#     plt.plot(continuous_predictions, color='r')
-#     # plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
-#     plt.plot(np.arange(len(test_set_plotting['finger'])), test_set_plotting['finger'], marker='o', linestyle='-',
-#              color='black')  # plot all SMBG values (artificial and real)
-#     plt.scatter(np.arange(len(test_set_plotting['finger']))[test_artificial_SMBG_indices],
-#                 test_set_plotting['finger'].iloc[test_artificial_SMBG_indices], marker='o', color='green', s=50,
-#                 zorder=5)   # plot the artifical SMBG values in another color
-#     plt.xlabel('Timestamp', fontsize=18)
-#     plt.ylabel('CGM (mg/dL)', fontsize=18)
-#     plt.legend(['Real', 'Predictions', "SMBG", "Artificial SMBG"], loc='lower right')
-#     plt.figtext(0.5, 0.01, f"Parameters: batch size: {batch_size}; #epochs: {epochs}; learning rate: {learning_rate};"
-#                            f" #prediction window: {prediction_window}", ha='center')
-#     plt.savefig(f"{dir_name}/test_{time_stamp}.png")
-#     plt.close()  # Close the plot to free up memory
-#
-#     # Plotting the training loss
-#     plt.figure(figsize=(12, 6))
-#     plt.plot(history.history['loss'])
-#     plt.title(f'Model Loss ({inter_statement})')
-#     plt.ylabel('Loss')
-#     plt.xlabel('Epoch')
-#     plt.legend(['Train'], loc='upper right')
-#     plt.figtext(0.5, 0.01, f"Parameters: batch size: {batch_size}; #epochs: {epochs}; learning rate: {learning_rate};"
-#                            f" #prediction window: {prediction_window}", ha='center')
-#     plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
-#     plt.close()  # Close the plot to free up memory
-
 def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
                           batch_size, epochs, learning_rate, prediction_window,
-                          test_artificial_SMBG_indices, inter_statement):
+                          test_artificial_SMBG_indices, inter_statement, SMBG_window, patient_index, data_from_2018):
     '''
 
     :param continuous_ytest:
@@ -347,24 +318,28 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plo
     os.makedirs(dir_name, exist_ok=True)
     # Plotting the predictions
     plt.figure(figsize=(16, 8))
-    plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse} ({inter_statement})')
+    plt.title(f'Blood Glucose Prediction Model Result with RMSE: {rmse} ({inter_statement}) (ID: {patient_index}) (is '
+              f'2018?{data_from_2018})')
     plt.plot(continuous_ytest, color='b')
     # plt.plot(np.arange(len(test_set_plotting['cbg'].iloc[:len(continuous_predictions)])), test_set_plotting['cbg'].iloc[:len(continuous_predictions)],color='blue')
     plt.plot(continuous_predictions, color='r')
     # plt.scatter(np.arange(len(smbg_scatter)), smbg_scatter, color='black', marker='o')
 
-    plt.plot(np.arange(len(test_set_plotting['finger'].iloc[:len(continuous_predictions)])), test_set_plotting['finger'].iloc[:len(continuous_predictions)], marker='o', linestyle='-',
+    plt.plot(np.arange(len(test_set_plotting['finger'].iloc[:len(continuous_predictions)])),
+             test_set_plotting['finger'].iloc[:len(continuous_predictions)], marker='o', linestyle='-',
              color='black')  # plot all SMBG values (artificial and real)
     test_artificial_SMBG_indices = np.array(test_artificial_SMBG_indices)
-    test_artificial_SMBG_indices = test_artificial_SMBG_indices[test_artificial_SMBG_indices < len(continuous_predictions)]
+    test_artificial_SMBG_indices = test_artificial_SMBG_indices[
+        test_artificial_SMBG_indices < len(continuous_predictions)]
     plt.scatter(np.arange(len(test_set_plotting['finger']))[test_artificial_SMBG_indices],
                 test_set_plotting['finger'].iloc[test_artificial_SMBG_indices], marker='o', color='green', s=50,
-                zorder=5)   # plot the artifical SMBG values in another color
+                zorder=5)  # plot the artifical SMBG values in another color
     plt.xlabel('Timestamp', fontsize=18)
     plt.ylabel('CGM (mg/dL)', fontsize=18)
     plt.legend(['Real', 'Predictions', "SMBG", "Artificial SMBG"], loc='lower right')
-    plt.figtext(0.5, 0.01, f"Parameters: batch size: {batch_size}; #epochs: {epochs}; learning rate: {learning_rate};"
-                           f" #prediction window: {prediction_window}", ha='center')
+    plt.figtext(0.5, 0.01, f"Parameters: Batch Size: {batch_size}; #Epochs: {epochs}; Learning Rate: {learning_rate};"
+                           f" Maximum SMGB Distance: {SMBG_window}h; Prediction Window: {round(prediction_window * 5 / 60, 2)}h",
+                ha='center')
     plt.savefig(f"{dir_name}/test_{time_stamp}.png")
     plt.close()  # Close the plot to free up memory
 
@@ -375,8 +350,9 @@ def create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plo
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train'], loc='upper right')
-    plt.figtext(0.5, 0.01, f"Parameters: batch size: {batch_size}; #epochs: {epochs}; learning rate: {learning_rate};"
-                           f" #prediction window: {round(prediction_window*5/60, 2)} hours", ha='center')
+    plt.figtext(0.5, 0.01, f"Parameters: Batch Size: {batch_size}; #Epochs: {epochs}; Learning Rate: {learning_rate};"
+                           f" Maximum SMGB Distance: {SMBG_window}h; Prediction Window: {round(prediction_window * 5 / 60, 2)}h",
+                ha='center')
     plt.savefig(f"{dir_name}/loss_{time_stamp}.png")
     plt.close()  # Close the plot to free up memory
 
@@ -396,8 +372,8 @@ if __name__ == "__main__":
 
     # UNCOMMENT THIS PART IF USED ON LOCAL MACHINE
     # Go one step up from the current directory
-    # parent_directory = os.path.dirname(current_directory)
-    # data_folder = os.path.join(parent_directory, 'dataset')
+    parent_directory = os.path.dirname(current_directory)
+    data_folder = os.path.join(parent_directory, 'dataset')
 
     # List of patient excel IDs in the year folders
     patient_ids_2018 = [559, 563, 570, 575, 588, 591]
@@ -450,17 +426,20 @@ if __name__ == "__main__":
     all_train_2020 = pd.concat(train_set_2020, ignore_index=True)
     all_test_2020 = pd.concat(test_set_2020, ignore_index=True)
 
+    # TODO: Improve the loading of data so we can test on 1 patient from 2018 or 2020, but also predict on all 12 patients
     index_patient_570 = 2
     train_set = train_set_2018[index_patient_570]
-    test_set = test_set_2018[index_patient_570]
+
+    # TODO: To go back to the working model just change here to 2018
+    test_set = test_set_2020[index_patient_570]
 
     # Select input data
     train_input_data = None
-    inter_model = True
+    inter_model = False
     inter_statement = "intra-patient model"  # Dont change
     patient_index = 2
     all_train_inter_model = []
-    data_from_2018 = True   # if true, it uses 2020 and 2018 set together for the training of inter model
+    data_from_2018 = False  # if true, it uses 2020 and 2018 set together for the training of inter model
     if inter_model:  # Concatenate the data of all patients excluding the patient under investigation
         inter_statement = "inter-patient model"
         for i in range(len(patient_ids_2018)):
@@ -480,13 +459,16 @@ if __name__ == "__main__":
         all_train_inter_model = pd.concat(all_train_inter_model, ignore_index=True)
         train_input_data = all_train_inter_model
     else:
-        train_input_data = train_set_2018[patient_index]  # only one patient
+        if data_from_2018:
+            train_input_data = train_set_2018[patient_index]# only one patient
+        else:
+            train_input_data = train_set_2020[patient_index]
 
     # Define Model Hyperparameters: (ADAPT ONLY HERE THE PARAMETERS)
-    batch_size = 30
+    batch_size = 150
     epochs = 2
     learning_rate = 0.001
-    prediction_window = 50
+    prediction_window = 80
     SMBG_window = 4  # in hours
     x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, test_set_plotting, train_artificial_SMBG_indices, test_artificial_SMBG_indices = read_patient(
         train_input_data, test_set, prediction_window, SMBG_window)
@@ -496,4 +478,4 @@ if __name__ == "__main__":
     # create_history_plot(history)
     create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
                           batch_size, epochs, learning_rate, prediction_window,
-                          test_artificial_SMBG_indices, inter_statement)
+                          test_artificial_SMBG_indices, inter_statement, SMBG_window, patient_index, data_from_2018) #TODO Plot patient ID
