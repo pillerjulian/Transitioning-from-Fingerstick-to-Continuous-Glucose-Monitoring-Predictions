@@ -362,18 +362,28 @@ if __name__ == "__main__":
     Main function
     
     '''
+    # Configuration flags
+    use_ubelix = False  # Set to True to run on UBELIX, set False to run locally
+    model_type = 'intra' # 'inter', 'intra', 'all'
 
-    # Path to the data folder
+    # Hyperparameters:
+    batch_size = 150
+    epochs = 2
+    learning_rate = 0.001
+    prediction_window = 80
+    SMBG_window = 4  # in hours
 
-    # Get the current working directory
+    # patient_ids = {
+    #     '2018': [559, 563, 570, 575, 588, 591],
+    #     '2020': [540, 544, 552, 567, 584, 596]
+    # }
+
+    # Load the dataset paths on Ubelix or Locally
     current_directory = os.getcwd()
-    # print(current_directory)
-    data_folder = os.path.join(current_directory, 'dataset')
-
-    # UNCOMMENT THIS PART IF USED ON LOCAL MACHINE
-    # Go one step up from the current directory
-    parent_directory = os.path.dirname(current_directory)
-    data_folder = os.path.join(parent_directory, 'dataset')
+    if use_ubelix:
+        data_folder = os.path.join(current_directory, 'dataset')
+    else:
+        data_folder = os.path.join(os.path.dirname(current_directory), 'dataset')
 
     # List of patient excel IDs in the year folders
     patient_ids_2018 = [559, 563, 570, 575, 588, 591]
@@ -430,52 +440,56 @@ if __name__ == "__main__":
     index_patient_570 = 2
     train_set = train_set_2018[index_patient_570]
 
-    # TODO: To go back to the working model just change here to 2018
-    test_set = test_set_2020[index_patient_570]
+    test_set = test_set_2018[index_patient_570]
 
     # Select input data
     train_input_data = None
-    inter_model = False
-    inter_statement = "intra-patient model"  # Dont change
+    model_type_statement = None     # for the plotting of the results
+
+    # TODO: Improve the loading of data so we can test on 1 patient from 2018 or 2020, but also predict on all 12 patients
     patient_index = 2
-    all_train_inter_model = []
-    data_from_2018 = False  # if true, it uses 2020 and 2018 set together for the training of inter model
-    if inter_model:  # Concatenate the data of all patients excluding the patient under investigation
-        inter_statement = "inter-patient model"
+    all_training_set = []
+    data_from_2018 = True  # True if the data is from 2018, False if the data is from 2020
+
+    if model_type == 'inter':  # Concatenate the data of all patients excluding the patient under investigation
+        model_type_statement = "inter-patient model"
         for i in range(len(patient_ids_2018)):
             if i != patient_index:
-                all_train_inter_model.append(
+                all_training_set.append(
                     train_set_2018[i])
-                all_train_inter_model.append(
+                all_training_set.append(
                     train_set_2020[i])
-                # pd.concat([all_train_inter_model, train_set_2018[i]], ignore_index=
             else:
                 if data_from_2018:
-                    all_train_inter_model.append(
+                    all_training_set.append(
                         train_set_2020[i])
                 else:
-                    all_train_inter_model.append(
+                    all_training_set.append(
                         train_set_2018[i])
-        all_train_inter_model = pd.concat(all_train_inter_model, ignore_index=True)
-        train_input_data = all_train_inter_model
-    else:
+        all_training_set = pd.concat(all_training_set, ignore_index=True)
+        train_input_data = all_training_set
+    elif model_type == 'intra':
+        model_type_statement = "intra-patient model"
         if data_from_2018:
             train_input_data = train_set_2018[patient_index]# only one patient
         else:
             train_input_data = train_set_2020[patient_index]
+    elif model_type == 'all':
+        model_type_statement = "all-patient model"
+        all_training_set = pd.concat([all_train_2018, all_train_2020], ignore_index=True)
+        train_input_data = all_training_set
 
-    # Define Model Hyperparameters: (ADAPT ONLY HERE THE PARAMETERS)
-    batch_size = 150
-    epochs = 2
-    learning_rate = 0.001
-    prediction_window = 80
-    SMBG_window = 4  # in hours
+    # Read the data of the patient
     x_train, y_train, x_test, y_test, continuous_ytest, scalers_transforms_train, scalers_transforms_test, test_set_plotting, train_artificial_SMBG_indices, test_artificial_SMBG_indices = read_patient(
         train_input_data, test_set, prediction_window, SMBG_window)
+
+    # Train the model
     model, history = train_model(x_train, y_train, batch_size, epochs, learning_rate)
+
+    # Make predictions
     predictions, continuous_predictions, rmse = make_prediction(scalers_transforms_test, model, x_test, y_test)
-    # show_plots(continuous_ytest, continuous_predictions,  smbg_scatter, rmse)
-    # create_history_plot(history)
+
+    # Create and save plots
     create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
                           batch_size, epochs, learning_rate, prediction_window,
-                          test_artificial_SMBG_indices, inter_statement, SMBG_window, patient_index, data_from_2018) #TODO Plot patient ID
+                          test_artificial_SMBG_indices, model_type_statement, SMBG_window, patient_index, data_from_2018)

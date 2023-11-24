@@ -368,7 +368,7 @@ if __name__ == "__main__":
     if inter_model:
         for i in range(len(patient_ids_2018)):
             if i != patient_index:
-                all_train_inter_model.append(train_set_2018[i])  # pd.concat([all_train_inter_model, train_set_2018[i]], ignore_index=True)
+                all_train_inter_model.append(train_set_2018[i])  # pd.concat([all_training_set, train_set_2018[i]], ignore_index=True)
         all_train_inter_model = pd.concat(all_train_inter_model, ignore_index=True)
         train_input_data = all_train_inter_model
     else:
