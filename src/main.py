@@ -77,23 +77,40 @@ def preprocess_data(data, SMBG_window):
     :param SMBG_window: SMBG window
     :return: preprocessed data and the indices of the artificial SMBG values
     """
-    # max_CGM_NaN_distance = 12 #in hours
-    #
-    # # Drop the rows with large gaps in cbg in the data
-    # CGM_indices = data['cbg'][data['cbg'].isna()].index
-    # print(CGM_indices)
-    # diffs = np.diff(CGM_indices)
-    # # Find where the difference between consecutive indices is greater than 1
-    # breaks = np.where(diffs > (max_CGM_NaN_distance*12))[0]
-    # print(breaks)
-    # for count, b in enumerate(breaks):
-    #     if count == len(breaks)-1:
-    #         break
-    #     else:
-    #         data.drop(data.index[CGM_indices[b]:CGM_indices[b+1]], inplace=True)
+    #Drop missing windows
+    max_CGM_NaN_distance = 12 * 12  # in hours*60/5 = hours*12
+    # Drop the rows with large gaps in cbg in the data
+    CGM_NaN_indices = data['cbg'][data['cbg'].isna()].index
+    diffs = np.diff(CGM_NaN_indices)
+    # Find where the difference between consecutive indices is greater than 1
+    breaks = np.where(diffs > 1)[0]
+    to_drop_indices = []
+    for i in np.arange(len(breaks)):
+        if i == 0:
+            stop_index_NaN_window = CGM_NaN_indices[breaks[i]] + 1
+            start_index_NaN_window = CGM_NaN_indices[0]
+        else:
+            stop_index_NaN_window = CGM_NaN_indices[breaks[i]] + 1
+            start_index_NaN_window = CGM_NaN_indices[breaks[i - 1] + 1]
+        if (stop_index_NaN_window - start_index_NaN_window) > max_CGM_NaN_distance:
+            to_drop_indices.extend(range(start_index_NaN_window, stop_index_NaN_window))
+        if i == len(breaks) - 1:
+            stop_index_NaN_window = CGM_NaN_indices[-1] + 1
+            start_index_NaN_window = CGM_NaN_indices[breaks[i] + 1]
+            if (stop_index_NaN_window - start_index_NaN_window) > max_CGM_NaN_distance:
+                to_drop_indices.extend(range(start_index_NaN_window, stop_index_NaN_window))
+    # Drop all at once
+    data.drop(to_drop_indices, inplace=True)
+    # Reset the index
+    data.reset_index(drop=True, inplace=True)
 
     # Interpolate the zones with missing 'cbg' so there is not regions with super steep changes
     data['cbg'] = data['cbg'].interpolate(method='linear', limit_direction='both')
+
+    # Replace SMBG values where the absolute difference exceeds the threshold and SMBG is not NaN
+    max_bg_difference = 100
+    mask = ((data['finger'] - data['cbg']).abs() > max_bg_difference) & (data['finger'].notna())
+    data.loc[mask, 'finger'] = data.loc[mask, 'cbg']
 
     # Replace any 0 values in 'finger' with corresponding values from 'cbg'
     data.loc[data['finger'] == 0, 'finger'] = data.loc[data['finger'] == 0, 'cbg']
@@ -368,7 +385,7 @@ if __name__ == "__main__":
 
     # Hyperparameters:
     batch_size = 150
-    epochs = 2
+    epochs = 50
     learning_rate = 0.001
     prediction_window = 80
     SMBG_window = 4  # in hours
