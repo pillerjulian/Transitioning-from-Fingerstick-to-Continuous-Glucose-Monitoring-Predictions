@@ -425,18 +425,18 @@ if __name__ == "__main__":
     model_type = 'intra'  # 'inter' to train model with all patients except the test one
     # 'intra', to train and test model on only one patient
 
+    patient_id = 570  # Choose a patient ID from the list below
+
+    # List of patient excel IDs in the year folders
+    patient_ids_2018 = [559, 563, 570, 575, 588, 591]
+    patient_ids_2020 = [540, 544, 552, 567, 584, 596]
+
     # Hyperparameters:
     batch_size = 150
     epochs = 50
     learning_rate = 0.001
     prediction_window = 80
     SMBG_window = 4  # in hours
-
-    patient_id = 570    # Choose a patient ID from the list below
-
-    # List of patient excel IDs in the year folders
-    patient_ids_2018 = [559, 563, 570, 575, 588, 591]
-    patient_ids_2020 = [540, 544, 552, 567, 584, 596]
 
     # Load the dataset paths on Ubelix or Locally
     current_directory = os.getcwd()
