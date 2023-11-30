@@ -77,31 +77,32 @@ def preprocess_data(data, SMBG_window):
     :param SMBG_window: SMBG window
     :return: preprocessed data and the indices of the artificial SMBG values
     """
-    #Drop missing windows
-    max_CGM_NaN_distance = 12 * 12  # in hours*60/5 = hours*12
     # Drop the rows with large gaps in cbg in the data
-    CGM_NaN_indices = data['cbg'][data['cbg'].isna()].index
-    diffs = np.diff(CGM_NaN_indices)
+    max_CGM_NaN_distance = 12 * 12  # in hours*60/5 = hours*12
+    CGM_NaN_indices = data['cbg'][data['cbg'].isna()].index  # Identify all indices where CGM is NaN
+    diffs = np.diff(CGM_NaN_indices)  # Calculate the difference between two successive NaN indices
     # Find where the difference between consecutive indices is greater than 1
+    # this indicates where a new NaN window starts
     breaks = np.where(diffs > 1)[0]
     to_drop_indices = []
     for i in np.arange(len(breaks)):
-        if i == 0:
-            stop_index_NaN_window = CGM_NaN_indices[breaks[i]] + 1
+        if i == 0:  # First NaN window
+            stop_index_NaN_window = CGM_NaN_indices[breaks[i]] + 1  # + 1 because window = 0 to N = 0:N+1
             start_index_NaN_window = CGM_NaN_indices[0]
-        else:
+        else:  # All windows between the first and the last one
             stop_index_NaN_window = CGM_NaN_indices[breaks[i]] + 1
             start_index_NaN_window = CGM_NaN_indices[breaks[i - 1] + 1]
+        # If NaN window is longer than the defined maximal window length, drop this window in the end
         if (stop_index_NaN_window - start_index_NaN_window) > max_CGM_NaN_distance:
             to_drop_indices.extend(range(start_index_NaN_window, stop_index_NaN_window))
-        if i == len(breaks) - 1:
+        if i == len(breaks) - 1:  # Last NaN window (last and second last window are checked in the same loop)
             stop_index_NaN_window = CGM_NaN_indices[-1] + 1
             start_index_NaN_window = CGM_NaN_indices[breaks[i] + 1]
             if (stop_index_NaN_window - start_index_NaN_window) > max_CGM_NaN_distance:
                 to_drop_indices.extend(range(start_index_NaN_window, stop_index_NaN_window))
-    # Drop all at once
+    # Drop all NaN windows which are longer than the defined maximum window length
     data.drop(to_drop_indices, inplace=True)
-    # Reset the index
+    # Reset the index of the dataframe
     data.reset_index(drop=True, inplace=True)
 
     # Interpolate the zones with missing 'cbg' so there is not regions with super steep changes
@@ -381,7 +382,7 @@ if __name__ == "__main__":
     '''
     # Configuration flags
     use_ubelix = False  # Set to True to run on UBELIX, set False to run locally
-    model_type = 'intra' # 'inter', 'intra', 'all'
+    model_type = 'intra'  # 'inter', 'intra', 'all'
 
     # Hyperparameters:
     batch_size = 150
@@ -461,7 +462,7 @@ if __name__ == "__main__":
 
     # Select input data
     train_input_data = None
-    model_type_statement = None     # for the plotting of the results
+    model_type_statement = None  # for the plotting of the results
 
     # TODO: Improve the loading of data so we can test on 1 patient from 2018 or 2020, but also predict on all 12 patients
     patient_index = 2
@@ -488,7 +489,7 @@ if __name__ == "__main__":
     elif model_type == 'intra':
         model_type_statement = "intra-patient model"
         if data_from_2018:
-            train_input_data = train_set_2018[patient_index]# only one patient
+            train_input_data = train_set_2018[patient_index]  # only one patient
         else:
             train_input_data = train_set_2020[patient_index]
     elif model_type == 'all':
@@ -509,4 +510,5 @@ if __name__ == "__main__":
     # Create and save plots
     create_and_save_plots(continuous_ytest, continuous_predictions, test_set_plotting, rmse, history,
                           batch_size, epochs, learning_rate, prediction_window,
-                          test_artificial_SMBG_indices, model_type_statement, SMBG_window, patient_index, data_from_2018)
+                          test_artificial_SMBG_indices, model_type_statement, SMBG_window, patient_index,
+                          data_from_2018)
