@@ -425,7 +425,7 @@ if __name__ == "__main__":
     model_type = 'intra'  # 'inter' to train model with all patients except the test one
     # 'intra', to train and test model on only one patient
 
-    patient_id = 570  # Choose a patient ID from the list below
+    patient_i = 540  # Choose a patient ID from the list below
 
     # List of patient excel IDs in the year folders
     patient_ids_2018 = [559, 563, 570, 575, 588, 591]
@@ -433,7 +433,7 @@ if __name__ == "__main__":
 
     # Hyperparameters:
     batch_size = 150
-    epochs = 50
+    epochs = 2
     learning_rate = 0.001
     prediction_window = 80
     SMBG_window = 4  # in hours
@@ -496,8 +496,9 @@ if __name__ == "__main__":
 
     patient_index = None
 
+    # Find the index of the patient ID in the list of all patient IDs
     for i, patient_number in enumerate(all_patient_ids):
-        if patient_number == patient_id:
+        if patient_number == patient_i:
             if i < len(patient_ids_2018) - 1:
                 patient_index = i
                 data_from_2018 = True
@@ -509,6 +510,7 @@ if __name__ == "__main__":
     if patient_index == None:
         raise ValueError("The patient ID is not in the dataset.")
 
+    # Get the sets for the patient under investigation
     if data_from_2018:
         test_set = test_set_2018[patient_index]
     else:
