@@ -1,5 +1,14 @@
 # Transitioning-from-Fingerstick-to-Continuous-Glucose-Monitoring-Predictions
-Semester Project - Data Driven Diabetes Management 
+Semester Project - Data Driven Diabetes Management - BME University of Bern 2023
+
+## Abstract 
+Diabetes, a chronic metabolic condition that leads to high blood glucose levels, affects over 540 million adults worldwide and is underscored by 6.7 million annual related deaths. Continuous glucose monitoring (CGM) devices are typically used in people with type 1 diabetes (PwT1D) with readings every 1-15 minutes. People with type 2 diabetes (PwT2D), which represent over 90% of the total diabetic population, rely on blood glucose information taken a few times a day from self-monitoring blood glucose (SMBG) devices. Our study aims to bridge this gap in diabetes management technology, particularly for PwT2D who primarily use SMBG samples. We hypothesize that it is feasible to develop an AI-based Long Short-Term Memory (LSTM) model that can accurately predict CGM profiles from intermitting SMBG readings and other relevant features. In addition, our objective is to minimize the number of required SMBG inputs while ensuring a good capability to safely predict glucose fluctuations. We used the OhioT1DM dataset, which contains data from PwT1D, including CGM, SMBG, basal and bolus insulin, and additional explanatory variables. After the implementation of the LSTM model, which included data preprocessing, adding artificial SMBG values, and determining the appropriate prediction window size, we performed three experiments. In the first experiment, we aimed to test the difference in CGM prediction accuracy, measured using the root mean square errors (RMSE), between intra- and inter-patient models. The intra-patient model used only the individual patient’s data for training, whereas the inter-patient model was trained on the aggregated data of all patients, excluding the target patient’s data. We could show the advantages and disadvantages of using an inter- versus an intra-patient model for CGM prediction. It boils down to the quality of the used patient data which model performs better. In the second and third experiments, we investigated the influence of different SMBG minimal frequencies and prediction window sizes. We confirmed the link between lower SMBG sampling frequency and a corresponding decrease in CGM prediction accuracy (1h: RMSE of 19.50; 8h: RMSE of 51.50). Furthermore, the ideal prediction window was shown to lie between 5 and 8.33 hours. We were able to show that an LSTM model can accurately predict CGM profiles from intermitting SMBG readings and other relevant features and that higher SMBG frequencies lead to higher CGM prediction accuracy. In future research, the focus should be put on the definition of safe glucose fluctuations and the needed clinical accuracy of CGM prediction.
+
+
+
+![SMBG_to_CGM_schematic](https://github.com/pillerjulian/Transitioning-from-Fingerstick-to-Continuous-Glucose-Monitoring-Predictions/assets/125559438/f8e91fda-1c59-4662-ae4e-04754974d10f)
+
+
 
 ## Run the program
 ### Environment for Jupyter Notebook on Local Machine
@@ -23,35 +32,3 @@ Activate the created environment and open the jupyter notebook from this environ
 - Now create a folder 'results' inside diabetes. This folder will hold the results of 'main.py'.
 - Now you can run the 'script.sh' to train the model and obtain the results.
 - After completion of the job, adapt and run 'fetch_results.sh' on your local machine to download the results from Ubelix or download them manually.
-
-## Scope 
-*Copied directly from the project description, to be adjusted.* 
-<br /> Diabetes is a chronic metabolic disease due to insufficient or the lack of insulin production from
-pancreatic β-cells. Insulin is the primary regulator for the cellular metabolism of blood glucose (BG)
-and any malfunction in its production results in elevated BG levels. For people with diabetes, it is
-crucially important to avoid the onset of extreme hypo- and hyperglycemic events. To this end, a
-plethora of statistical and machine learning (ML) algorithms [1]. have been introduced to support
-People with Type 1 Diabetes (PwT1D) in managing the glucose metabolism by predicting future BG
-levels and raising alarms [2]. Most of those predictive tools utilize continuous glucose monitoring
-(CGM), demographic, and patient data. We assume that people with any type of diabetes could
-benefit from predictions about future glycemic excursions. However, CGM is mostly used by PwT1D
-and the majority of People with Type 2 Diabetes (PwT2D) use self-monitoring blood glucose
-(SMBG) measurements such as finger prink samples. Therefore, the question arises, what
-minimum number of finger stick blood samples are required to predict future blood glucose values
-and adverse events as accurate as when CGM is used?
-
-## Data 
-*Copied directly from the project description, to be adjusted.*
- <br /> You will be working with recorded data from 12 different individuals with T1D. The data was
-released in the OhioT1DM dataset. You will have access to information such as CGM, SMBG,
-basal insulin rate, bolus injection, the self-reported time and type of a meal, plus the patient’s
-carbohydrate estimate for the meal and more. The measurements are provided at intervals of
-minutes.
-
-## Experiment 
-*Copied directly from the project description, to be adjusted.* 
-<br /> Within the framework of this experiment, you will evaluate what number of finger stick blood
-samples are required to generate a CGM-like glucose profile by augmenting regular finger stick
-values (taken prior the BG before main meals and sleep) through artificially selecting CGM values
-at certain time points as seeds to recreate the whole CGM sequence, experimenting for different
-prediction horizons (I.e., 1h, 2h etc.).
