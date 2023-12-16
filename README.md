@@ -1,5 +1,5 @@
 # Transitioning-from-Fingerstick-to-Continuous-Glucose-Monitoring-Predictions
-Semester Project - Data Driven Diabetes Management - BME University of Bern 2023
+Semester Project - Data Driven Diabetes Management - BME University of Bern 2023 <br />
 Authors: Daniel Kerber, Diego Zeiter & Julian Piller 
 
 ## Abstract 
